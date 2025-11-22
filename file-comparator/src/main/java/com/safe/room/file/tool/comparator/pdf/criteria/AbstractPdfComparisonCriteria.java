@@ -1,6 +1,7 @@
 package com.safe.room.file.tool.comparator.pdf.criteria;
 
 import com.safe.room.file.tool.comparator.pdf.dto.DifferenceInfo;
+import com.safe.room.file.tool.comparator.pdf.dto.DifferenceDescription;
 import com.safe.room.file.tool.comparator.pdf.enumeration.DifferenceType;
 import com.safe.room.file.tool.comparator.pdf.enumeration.Severity;
 
@@ -58,7 +59,36 @@ public abstract class AbstractPdfComparisonCriteria implements PdfComparisonCrit
     protected void addDifference(List<DifferenceInfo> differences, String message, String location, int pageNumber) {
         differences.add(new DifferenceInfo(
             type,
-            message,
+            new DifferenceInfo.BasicDifferenceDescription(message, type),
+            location,
+            severity,
+            pageNumber
+        ));
+    }
+    
+    /**
+     * Helper method to add a detailed difference to the differences list.
+     * 
+     * @param differences the list to add the difference to
+     * @param description the detailed description of the difference
+     * @param location the location where the difference was found
+     */
+    protected void addDifference(List<DifferenceInfo> differences, DifferenceDescription description, String location) {
+        addDifference(differences, description, location, 0);
+    }
+    
+    /**
+     * Helper method to add a detailed difference to the differences list with a specific page number.
+     * 
+     * @param differences the list to add the difference to
+     * @param description the detailed description of the difference
+     * @param location the location where the difference was found
+     * @param pageNumber the page number where the difference was found (0 if not applicable)
+     */
+    protected void addDifference(List<DifferenceInfo> differences, DifferenceDescription description, String location, int pageNumber) {
+        differences.add(new DifferenceInfo(
+            type,
+            description,
             location,
             severity,
             pageNumber

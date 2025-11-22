@@ -1,6 +1,7 @@
 package com.safe.room.file.tool.comparator.pdf.criteria;
 
 import com.safe.room.file.tool.comparator.pdf.dto.DifferenceInfo;
+import com.safe.room.file.tool.comparator.pdf.dto.descriptions.TextContentDifference;
 import com.safe.room.file.tool.comparator.pdf.enumeration.DifferenceType;
 import com.safe.room.file.tool.comparator.pdf.enumeration.Severity;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -60,8 +61,8 @@ public class TextContentComparisonCriteria extends AbstractPdfComparisonCriteria
                 
                 if (!areTextsEqual(text1, text2)) {
                     String diffDetails = findTextDifferences(text1, text2, currentPage);
-                    String description = String.format("Text content differs. %s", diffDetails);
-                    addDifference(differences, description, "Page Content", currentPage);
+                    TextContentDifference textDiff = new TextContentDifference(diffDetails, currentPage);
+                    addDifference(differences, textDiff, "Page Content", currentPage);
                     hasDifferences = true;
                 }
             }
@@ -77,7 +78,7 @@ public class TextContentComparisonCriteria extends AbstractPdfComparisonCriteria
             return !hasDifferences;
             
         } catch (IOException e) {
-            addDifference(differences, "Error extracting text: " + e.getMessage(), "Document", 0);
+            addDifference(differences, "Error extracting text: " + e.getMessage(), "Document");
             return false;
         }
     }

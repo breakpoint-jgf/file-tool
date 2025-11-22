@@ -262,95 +262,113 @@
         <div class="differences">
             <h3>Differences Found (${result.differences()?size}):</h3>
             <#list result.differences() as diff>
-                    <#-- Parse the difference description into structured data -->
-                    <#assign diffText = diff.description()>
-                    <#if diffText?contains("BEFORE (PDF 1):")>
-                    
-                    <div class="diff-container">
-                        <div class="diff-header">
-                            <div>
-                                <strong>Difference #${diff?counter}</strong>
-                                <#if diff.pageNumber?? && diff.pageNumber?is_number && diff.pageNumber gt 0>
-                                    <span style="margin-left: 10px;">Page ${diff.pageNumber}</span>
-                                <#elseif diff.pageNumber?is_string && diff.pageNumber?has_content>
-                                    <span style="margin-left: 10px;">Page ${diff.pageNumber}</span>
-                                </#if>
-                            </div>
-                            <#if diff.timestamp??>
-                                <span style="font-size: 0.9em; opacity: 0.9;">${diff.timestamp?datetime?string["yyyy-MM-dd HH:mm:ss"]}</span>
+                <div class="diff-container">
+                    <div class="diff-header">
+                        <div>
+                            <strong>Difference #${diff?counter}: ${diff.type()}</strong>
+                            <#if diff.pageNumber()?? && diff.pageNumber() gt 0>
+                                <span style="margin-left: 10px;">Page ${diff.pageNumber()}</span>
                             </#if>
-                        </div>
-                        
-                        <#if diff.originalText?? || diff.modifiedText??>
-                        <div class="diff-section">
-                            <#if diff.originalText??>
-                            <div class="diff-before">
-                                <h4>Original Text</h4>
-                                <div class="diff-content">
-                                    ${diff.originalText?replace("\n", "<br>")?replace("\\n", "<br>")?replace("\\r", "")?replace("\\t", "    ")}
-                                </div>
-                            </div>
-                            </#if>
-                            
-                            <#if diff.modifiedText??>
-                            <div class="diff-after">
-                                <h4>Modified Text</h4>
-                                <div class="diff-content">
-                                    ${diff.modifiedText?replace("\n", "<br>")?replace("\\n", "<br>")?replace("\\r", "")?replace("\\t", "    ")}
-                                </div>
-                            </div>
-                            </#if>
-                        </div>
-                        </#if>
-                        
-                        <#if diff.details??>
-                        <div class="diff-details">
-                            <h4>Difference Details</h4>
-                            <#if diff.details?is_string>
-                                <div>${diff.details}</div>
-                            <#elseif diff.details?is_sequence>
-                                <#list diff.details as detail>
-                                    <#if detail?is_hash>
-                                        <div><strong>${detail.type!"Detail"}:</strong> ${detail.description!""}</div>
-                                    <#else>
-                                        <div>${detail?string}</div>
+                            <span class="severity-badge" style="margin-left: 10px; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; background-color: 
+                                <#if diff.severity()??>
+                                    <#if diff.severity().name() == 'ERROR'>#ffebee
+                                    <#elseif diff.severity().name() == 'WARNING'>#fff8e1
+                                    <#else>#e3f2fd
                                     </#if>
-                                </#list>
-                            <#else>
-                                <div>${diff.details?string}</div>
-                            </#if>
+                                <#else>#f5f5f5
+                                </#if>;
+                                color: 
+                                <#if diff.severity()??>
+                                    <#if diff.severity().name() == 'ERROR'>#b71c1c
+                                    <#elseif diff.severity().name() == 'WARNING'>#e65100
+                                    <#else>#0d47a1
+                                    </#if>
+                                <#else>#212121
+                                </#if>;">
+                                ${diff.severity()!"UNKNOWN"}
+                            </span>
                         </div>
+                        <#if diff.location()?? && diff.location() != "">
+                            <span style="font-size: 0.9em; opacity: 0.9;">Location: ${diff.location()}</span>
                         </#if>
-                        
-                        <#if diff.metrics??>
-                        <div class="diff-metrics">
-                            <h4>Document Metrics</h4>
-                            <table>
-                                <#if diff.metrics?is_hash>
-                                    <#list diff.metrics as key, value>
-                                        <tr>
-                                            <td><strong>${key?capitalize}</strong></td>
-                                            <td>${value?string}</td>
-                                        </tr>
-                                    </#list>
-                                <#elseif diff.metrics?is_sequence>
-                                    <#list diff.metrics as item>
-                                        <tr>
-                                            <td colspan="2">${item?string}</td>
-                                        </tr>
-                                    </#list>
-                                <#else>
-                                    <tr><td>${diff.metrics?string}</td></tr>
+                    </div>
+                    
+                    <div class="diff-details">
+                        <#-- Handle different types of differences -->
+                        <#if diff.description()??>
+                            <#-- Text Content Difference -->
+                            <#if diff.description().getClass().simpleName == "TextContentDifference">
+                                <#assign textDiff = diff.description()>
+                                <#if textDiff.diffDetails??>
+                                    <div class="diff-content">
+                                        <h4>Text Difference</h4>
+                                        <p>${textDiff.diffDetails?replace("\n", "<br>")?replace("\\n", "<br>")?replace("\\r", "")?replace("\\t", "    ")}</p>
+                                    </div>
                                 </#if>
-                            </table>
-                        </div>
+                                <#if textDiff.pageNumber?? && textDiff.pageNumber gt 0>
+                                    <div class="diff-meta">
+                                        <strong>Page:</strong> ${textDiff.pageNumber}
+                                    </div>
+                                </#if>
+                                
+                            <#-- Size Difference -->
+                            <#elseif diff.description().getClass().simpleName == "SizeDifference">
+                                <#assign sizeDiff = diff.description()>
+                                <div class="diff-metrics">
+                                    <h4>Size Difference</h4>
+                                    <table>
+                                        <tr>
+                                            <td><strong>File 1 Size:</strong></td>
+                                            <td>${sizeDiff.size1} ${sizeDiff.unit!"bytes"}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>File 2 Size:</strong></td>
+                                            <td>${sizeDiff.size2} ${sizeDiff.unit!"bytes"}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Difference:</strong></td>
+                                            <td>${sizeDiff.size1 - sizeDiff.size2} ${sizeDiff.unit!"bytes"}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                
+                            <#-- Metadata Difference -->
+                            <#elseif diff.description().getClass().simpleName == "MetadataDifference">
+                                <#assign metaDiff = diff.description()>
+                                <div class="diff-metrics">
+                                    <h4>Metadata Differences</h4>
+                                    <#if metaDiff.differingFields?? && metaDiff.differingFields?size gt 0>
+                                        <table>
+                                            <tr>
+                                                <th>Field</th>
+                                                <th>Value 1</th>
+                                                <th>Value 2</th>
+                                            </tr>
+                                            <#list metaDiff.differingFields as field, values>
+                                                <tr>
+                                                    <td><strong>${field}</strong></td>
+                                                    <td>${values[0]!"N/A"}</td>
+                                                    <td>${values[1]!"N/A"}</td>
+                                                </tr>
+                                            </#list>
+                                        </table>
+                                    <#else>
+                                        <p>Metadata fields differ, but no specific fields were identified.</p>
+                                    </#if>
+                                </div>
+                                
+                            <#-- Fallback for any other DifferenceDescription implementation -->
+                            <#else>
+                                <div class="diff-content">
+                                    <h4>${diff.type()}</h4>
+                                    <p>${diff.description().getDescription()}</p>
+                                </div>
+                            </#if>
+                        <#else>
+                            <p>No description available for this difference.</p>
                         </#if>
                     </div>
-                <#else>
-                    <div class="difference">
-                        <strong>${diff?counter}.</strong> ${diff.description()}
-                    </div>
-                </#if>
+                </div>
             </#list>
         </div>
     </#if>

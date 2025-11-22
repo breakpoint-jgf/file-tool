@@ -26,11 +26,15 @@ public class FileComparatorApp {
     private static final int EXIT_FILE2_INVALID = 3;
     private static final int EXIT_IO_ERROR = 5;
     private static final int EXIT_UNEXPECTED_ERROR = 6;
+    private static final String DEFAULT_REPORT_DIR = ".";
     
     /**
      * Main entry point for the application.
      * 
-     * @param args Command line arguments: file1 file2
+     * @param args Command line arguments: file1 file2 [outputDir]
+     *             file1: First file to compare
+     *             file2: Second file to compare
+     *             outputDir: (Optional) Directory where to save the report (default: current directory)
      */
     public static void main(String[] args) {
         try {
@@ -57,12 +61,29 @@ public class FileComparatorApp {
         File file1 = validateAndGetFile(args[0], "First", EXIT_FILE1_INVALID);
         File file2 = validateAndGetFile(args[1], "Second", EXIT_FILE2_INVALID);
         
+        // Get output directory (default to current directory if not specified)
+        String outputDir = args.length > 2 ? args[2] : DEFAULT_REPORT_DIR;
+        File outputDirFile = new File(outputDir);
+        
+        // Create output directory if it doesn't exist
+        if (!outputDirFile.exists() && !outputDirFile.mkdirs()) {
+            throw new ApplicationException(
+                "Failed to create output directory: " + outputDirFile.getAbsolutePath(),
+                EXIT_IO_ERROR);
+        }
+        
+        if (!outputDirFile.isDirectory()) {
+            throw new ApplicationException(
+                "Specified output path is not a directory: " + outputDirFile.getAbsolutePath(),
+                EXIT_IO_ERROR);
+        }
+        
         try {
             FileComparator comparator = getFileComparator(file1, file2);
             printFileInfo(file1, file2, comparator);
             
             ComparisonResult result = compareFiles(comparator, file1, file2);
-            printComparisonResults(result, file1, file2);
+            printComparisonResults(result, file1, file2, outputDirFile);
             
         } catch (IOException e) {
             throw new ApplicationException("Error reading files: " + e.getMessage(), e, EXIT_IO_ERROR);
@@ -78,7 +99,7 @@ public class FileComparatorApp {
      * @throws ApplicationException If arguments are invalid
      */
     private static void validateArguments(String[] args) throws ApplicationException {
-        if (args.length != 2) {
+        if (args.length < 2 || args.length > 3) {
             printUsage();
             throw new ApplicationException("Invalid number of arguments", EXIT_INVALID_ARGS);
         }
@@ -190,7 +211,16 @@ public class FileComparatorApp {
      */
     private static final FileCompareReportGenerator FILE_COMPARE_REPORT_GENERATOR = new FileCompareReportGenerator();
     
-    private static void printComparisonResults(ComparisonResult result, File file1, File file2) {
+    /**
+     * Prints the comparison results to the console and generates a report file.
+     * The link will work in most modern terminals that support ANSI escape codes.
+     * 
+     * @param result Comparison result to display
+     * @param file1 First file that was compared
+     * @param file2 Second file that was compared
+     * @param outputDir Directory where to save the report
+     */
+    private static void printComparisonResults(ComparisonResult result, File file1, File file2, File outputDir) {
         String resultStatus = result.areEqual() ? "EQUAL" : "DIFFERENT";
         System.out.println("Files are " + resultStatus);
         
@@ -204,7 +234,14 @@ public class FileComparatorApp {
         
         // Generate and save the report
         try {
-            File reportFile = FILE_COMPARE_REPORT_GENERATOR.generateReport(result, file1, file2);
+            // Create a timestamped report filename
+            String timestamp = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String reportFilename = String.format("comparison_report_%s.html", timestamp);
+            File reportFile = new File(outputDir, reportFilename);
+            
+            // Generate the report in the specified directory
+            FILE_COMPARE_REPORT_GENERATOR.generateReport(result, file1, file2, reportFile);
             String reportPath = reportFile.getAbsolutePath();
             
             // Create a clickable link that works in most terminals
@@ -249,10 +286,16 @@ public class FileComparatorApp {
         System.out.println("Compares two files using the appropriate comparator based on file types.");
         System.out.println();
         System.out.println("Usage:");
-        System.out.println("  java -jar file-comparator.jar <file1> <file2>");
+        System.out.println("  java -jar file-comparator.jar <file1> <file2> [outputDir]");
         System.out.println();
-        System.out.println("Example:");
+        System.out.println("Arguments:");
+        System.out.println("  file1      First file to compare");
+        System.out.println("  file2      Second file to compare");
+        System.out.println("  outputDir  (Optional) Directory where to save the report (default: current directory)");
+        System.out.println();
+        System.out.println("Examples:");
         System.out.println("  java -jar file-comparator.jar document1.pdf document2.pdf");
+        System.out.println("  java -jar file-comparator.jar doc1.pdf doc2.pdf ./reports");
     }
     
     /**
