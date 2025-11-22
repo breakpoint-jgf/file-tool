@@ -187,17 +187,110 @@ public class CustomPdfCriteria extends AbstractPdfComparisonCriteria {
 }
 ```
 
+### Creating a Custom Difference Template
+
+For each custom criteria, you should create a corresponding FTL template to render its differences in the report. Here's how to create a custom template:
+
+1. Create a new FTL file in `src/main/resources/templates/comparator/differences/` with a descriptive name (e.g., `CustomDifference.ftl`)
+
+```html
+<#-- CustomDifference.ftl -->
+<#-- @ftlvariable name="description" type="com.safe.room.file.tool.comparator.pdf.dto.descriptions.CustomDifference" -->
+
+<div class="custom-difference">
+    <h4>Custom Difference Detected</h4>
+    
+    <#-- Display custom parameter value -->
+    <div class="custom-param">
+        <strong>Custom Parameter:</strong> ${description.customParameter}
+    </div>
+    
+    <#-- Example of conditional display -->
+    <#if description.someCondition()>
+        <div class="custom-condition">
+            Custom condition is met
+        </div>
+    </#if>
+    
+    <#-- Example of iterating through a list of items -->
+    <#if description.items?? && description.items?has_content>
+        <div class="custom-items">
+            <strong>Items:</strong>
+            <ul>
+                <#list description.items as item>
+                    <li>${item}</li>
+                </#list>
+            </ul>
+        </div>
+    </#if>
+</div>
+
+<style>
+    .custom-difference {
+        padding: 10px;
+        border-left: 3px solid #6c5ce7;
+        background-color: #f8f9fa;
+        margin: 10px 0;
+    }
+    
+    .custom-param {
+        margin: 8px 0;
+        padding: 5px;
+        background-color: #f1f2f6;
+        border-radius: 4px;
+    }
+    
+    .custom-items {
+        margin-top: 10px;
+    }
+    
+    .custom-items ul {
+        margin: 5px 0 0 20px;
+        padding: 0;
+    }
+</style>
+```
+
 ### Registering Custom Criteria
 
 To use your custom criteria, register it with the `PdfComparisonConfig`:
 
 ```java
+// Create configuration with custom criteria
 PdfComparisonConfig config = PdfComparisonConfig.builder()
     .withCriteria(new CustomPdfCriteria("custom-value"))
     .build();
 
+// Create comparator with the configuration
 PdfComparator comparator = new PdfComparator(config);
+
+// Compare files
+ComparisonResult result = comparator.compare(file1, file2);
+
+// The template will be automatically used based on the DifferenceType
+// and the description's templateName() method
 ```
+
+### Required Methods in Your Difference Description Class
+
+Your custom difference description class should implement `DifferenceDescription` and include:
+
+```java
+public class CustomDifference implements DifferenceDescription {
+    // Your fields and methods
+    
+    @Override
+    public String templateName() {
+        // This should match the FTL filename without the .ftl extension
+        return "CustomDifference";
+    }
+    
+    @Override
+    public String getDescription() {
+        // Return a brief description of the difference
+        return "Custom difference found: " + customParameter;
+    }
+}
 
 ## Building from Source
 
