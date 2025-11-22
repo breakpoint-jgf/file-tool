@@ -6,12 +6,9 @@ import com.safe.room.file.tool.comparator.pdf.enumeration.DifferenceType;
 import com.safe.room.file.tool.comparator.pdf.enumeration.Severity;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.commons.text.diff.CommandVisitor;
-import org.apache.commons.text.diff.StringsComparator;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -92,9 +89,11 @@ public class TextContentComparisonCriteria extends AbstractPdfComparisonCriteria
      */
     private boolean areTextsEqual(String text1, String text2) {
         if (ignoreSpacingDifferences) {
-            return normalizeWhitespace(text1).equals(normalizeWhitespace(text2));
+            String normalized1 = normalizeWhitespace(text1);
+            String normalized2 = normalizeWhitespace(text2);
+            return normalized1.equalsIgnoreCase(normalized2);
         }
-        return text1.equals(text2);
+        return text1.equalsIgnoreCase(text2);
     }
     
     /**

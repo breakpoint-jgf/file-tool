@@ -294,76 +294,20 @@
                     </div>
                     
                     <div class="diff-details">
-                        <#-- Handle different types of differences -->
+                        <#-- Include the appropriate difference template based on the description class name -->
                         <#if diff.description()??>
-                            <#-- Text Content Difference -->
-                            <#if diff.description().getClass().simpleName == "TextContentDifference">
-                                <#assign textDiff = diff.description()>
-                                <#if textDiff.diffDetails??>
-                                    <div class="diff-content">
-                                        <h4>Text Difference</h4>
-                                        <p>${textDiff.diffDetails?replace("\n", "<br>")?replace("\\n", "<br>")?replace("\\r", "")?replace("\\t", "    ")}</p>
-                                    </div>
-                                </#if>
-                                <#if textDiff.pageNumber?? && textDiff.pageNumber gt 0>
-                                    <div class="diff-meta">
-                                        <strong>Page:</strong> ${textDiff.pageNumber}
-                                    </div>
-                                </#if>
-                                
-                            <#-- Size Difference -->
-                            <#elseif diff.description().getClass().simpleName == "SizeDifference">
-                                <#assign sizeDiff = diff.description()>
-                                <div class="diff-metrics">
-                                    <h4>Size Difference</h4>
-                                    <table>
-                                        <tr>
-                                            <td><strong>File 1 Size:</strong></td>
-                                            <td>${sizeDiff.size1} ${sizeDiff.unit!"bytes"}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>File 2 Size:</strong></td>
-                                            <td>${sizeDiff.size2} ${sizeDiff.unit!"bytes"}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Difference:</strong></td>
-                                            <td>${sizeDiff.size1 - sizeDiff.size2} ${sizeDiff.unit!"bytes"}</td>
-                                        </tr>
-                                    </table>
+                            <#assign description = diff.description()>
+                            <#assign templateName = description.templateName>
+                            <#assign diffTemplate = "differences/" + templateName + ".ftl">
+                            <#attempt>
+                                <#include diffTemplate>
+                            <#recover>
+                                <div class="diff-unknown">
+                                    <h4>Unsupported difference type: ${templateName}</h4>
+                                    <p>No template found for this difference type.</p>
+                                    <p>${description.getDescription()!''}</p>
                                 </div>
-                                
-                            <#-- Metadata Difference -->
-                            <#elseif diff.description().getClass().simpleName == "MetadataDifference">
-                                <#assign metaDiff = diff.description()>
-                                <div class="diff-metrics">
-                                    <h4>Metadata Differences</h4>
-                                    <#if metaDiff.differingFields?? && metaDiff.differingFields?size gt 0>
-                                        <table>
-                                            <tr>
-                                                <th>Field</th>
-                                                <th>Value 1</th>
-                                                <th>Value 2</th>
-                                            </tr>
-                                            <#list metaDiff.differingFields as field, values>
-                                                <tr>
-                                                    <td><strong>${field}</strong></td>
-                                                    <td>${values[0]!"N/A"}</td>
-                                                    <td>${values[1]!"N/A"}</td>
-                                                </tr>
-                                            </#list>
-                                        </table>
-                                    <#else>
-                                        <p>Metadata fields differ, but no specific fields were identified.</p>
-                                    </#if>
-                                </div>
-                                
-                            <#-- Fallback for any other DifferenceDescription implementation -->
-                            <#else>
-                                <div class="diff-content">
-                                    <h4>${diff.type()}</h4>
-                                    <p>${diff.description().getDescription()}</p>
-                                </div>
-                            </#if>
+                            </#attempt>
                         <#else>
                             <p>No description available for this difference.</p>
                         </#if>

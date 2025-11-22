@@ -16,4 +16,11 @@ public interface DifferenceDescription {
      * @return The type of difference this description represents
      */
     DifferenceType getType();
+    
+    /**
+     * @return The name of the template to use for rendering this difference
+     */
+    default String getTemplateName() {
+        return getClass().getSimpleName();
+    }
 }

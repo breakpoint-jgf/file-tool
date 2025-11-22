@@ -3,13 +3,10 @@ package com.safe.room.file.tool.comparator;
 import com.safe.room.file.tool.comparator.exception.UnsupportedFileTypeException;
 import com.safe.room.file.tool.comparator.pdf.PdfComparator;
 import com.safe.room.file.tool.comparator.pdf.PdfComparisonConfig;
+import com.safe.room.file.tool.comparator.pdf.criteria.TextContentComparisonCriteria;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Factory class for creating file comparators based on file types.
@@ -24,7 +21,7 @@ public class FileComparatorFactory {
         // Register default comparators
         registerComparatorPair("pdf", "pdf",
                 new PdfComparator(PdfComparisonConfig.builder()
-                        .withTextContentComparison(true)
+                        .withCriteria(new TextContentComparisonCriteria(true))
                         .build())
         );
     }

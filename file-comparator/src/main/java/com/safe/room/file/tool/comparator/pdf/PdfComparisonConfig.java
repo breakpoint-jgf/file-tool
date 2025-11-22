@@ -3,26 +3,38 @@ package com.safe.room.file.tool.comparator.pdf;
 import com.safe.room.file.tool.comparator.pdf.criteria.PdfComparisonCriteria;
 import com.safe.room.file.tool.comparator.pdf.criteria.TextContentComparisonCriteria;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Configuration class for PDF comparison options.
  * Uses the Builder pattern to create immutable configuration instances.
  */
 public final class PdfComparisonConfig {
-    private final List<PdfComparisonCriteria> criteriaList;
+    private final Map<Class<? extends PdfComparisonCriteria>, PdfComparisonCriteria> criteriaMap;
 
     private PdfComparisonConfig(Builder builder) {
-        this.criteriaList = List.copyOf(builder.criteriaList);
+        this.criteriaMap = Map.copyOf(builder.criteriaMap);
     }
 
     /**
      * @return an immutable list of all enabled comparison criteria
      */
     public List<PdfComparisonCriteria> getCriteria() {
-        return criteriaList;
+        return new ArrayList<>(criteriaMap.values());
+    }
+
+    /**
+     * Gets a specific criteria instance by its type.
+     *
+     * @param criteriaClass the class of the criteria to retrieve
+     * @param <T> the type of the criteria
+     * @return an Optional containing the criteria if found, empty otherwise
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends PdfComparisonCriteria> Optional<T> getCriteria(Class<T> criteriaClass) {
+        return Optional.ofNullable((T) criteriaMap.get(criteriaClass));
     }
 
     /**
@@ -33,11 +45,11 @@ public final class PdfComparisonConfig {
     }
 
     /**
-     * @return a new instance with all comparison features enabled
+     * @return a new instance with all comparison features enabled with default settings
      */
     public static PdfComparisonConfig allEnabled() {
         return builder()
-            .withTextContentComparison()
+            .withCriteria(new TextContentComparisonCriteria(false))
             .build();
     }
 
@@ -52,44 +64,56 @@ public final class PdfComparisonConfig {
      * Builder for creating immutable PdfComparisonConfig instances.
      */
     public static final class Builder {
-        private final List<PdfComparisonCriteria> criteriaList = new ArrayList<>();
-        private boolean textContentIgnoreSpacing = false;
+        private final Map<Class<? extends PdfComparisonCriteria>, PdfComparisonCriteria> criteriaMap = new HashMap<>();
+        private final Map<Class<? extends PdfComparisonCriteria>, Supplier<? extends PdfComparisonCriteria>> criteriaSuppliers = new HashMap<>();
 
         private Builder() {
-            // Private constructor
+            // Register default criteria suppliers
+            registerCriteria(TextContentComparisonCriteria.class, () -> new TextContentComparisonCriteria(false));
         }
 
         /**
-         * Adds all default comparison criteria to the configuration.
-         * @return this builder instance for method chaining
-         */
-        public Builder withAllDefaultCriteria() {
-            return this
-                .withTextContentComparison();
-        }
-
-        /**
-         * Enables text content comparison with default settings (spacing differences are considered).
-         * 
-         * @return this builder instance for method chaining
-         */
-        public Builder withTextContentComparison() {
-            return withTextContentComparison(false);
-        }
-        
-        /**
-         * Enables text content comparison with the option to ignore spacing differences.
+         * Register a criteria supplier for a specific criteria type.
+         * This allows for custom criteria to be used with the builder's fluent API.
          *
-         * @param ignoreSpacingDifferences if true, differences in whitespace will be ignored
+         * @param criteriaClass the criteria class
+         * @param supplier the supplier that creates a new instance of the criteria
+         * @param <T> the type of the criteria
          * @return this builder instance for method chaining
          */
-        public Builder withTextContentComparison(boolean ignoreSpacingDifferences) {
-            this.textContentIgnoreSpacing = ignoreSpacingDifferences;
-            return withCriteria(new TextContentComparisonCriteria(ignoreSpacingDifferences));
+        public <T extends PdfComparisonCriteria> Builder registerCriteria(
+                Class<T> criteriaClass,
+                Supplier<T> supplier) {
+            criteriaSuppliers.put(criteriaClass, supplier);
+            return this;
         }
+
+        /**
+         * Configures an existing criteria instance if it exists, or creates a new one using the registered supplier.
+         *
+         * @param criteriaClass the criteria class to configure
+         * @param configurator the configuration to apply
+         * @param <T> the type of the criteria
+         * @return this builder instance for method chaining
+         */
+        @SuppressWarnings("unchecked")
+        public <T extends PdfComparisonCriteria> Builder configureCriteria(
+                Class<T> criteriaClass,
+                Consumer<T> configurator) {
+            T criteria = (T) criteriaMap.computeIfAbsent(
+                criteriaClass,
+                k -> Optional.ofNullable(criteriaSuppliers.get(k))
+                           .map(Supplier::get)
+                           .orElseThrow(() -> new IllegalArgumentException("No supplier registered for criteria: " + criteriaClass.getName()))
+            );
+            configurator.accept(criteria);
+            return this;
+        }
+
 
         /**
          * Adds a custom comparison criteria to the configuration.
+         * Replaces any existing criteria of the same type.
          *
          * @param criteria the criteria to add
          * @return this builder instance for method chaining
@@ -97,23 +121,28 @@ public final class PdfComparisonConfig {
          */
         public Builder withCriteria(PdfComparisonCriteria criteria) {
             Objects.requireNonNull(criteria, "Criteria cannot be null");
-            // Special handling for TextContentComparisonCriteria to maintain the ignoreSpacing flag
-            if (criteria instanceof TextContentComparisonCriteria) {
-                this.textContentIgnoreSpacing = ((TextContentComparisonCriteria) criteria).isIgnoreSpacingDifferences();
-            }
-            this.criteriaList.removeIf(c -> c.getType().equals(criteria.getType()));
-            this.criteriaList.add(criteria);
+            criteriaMap.put(criteria.getClass(), criteria);
             return this;
         }
 
         /**
-         * Removes a comparison criteria by type.
+         * Removes a comparison criteria by its class.
          *
-         * @param type the type of criteria to remove
+         * @param criteriaClass the class of the criteria to remove
          * @return this builder instance for method chaining
          */
-        public Builder withoutCriteria(String type) {
-            this.criteriaList.removeIf(c -> c.getType().equals(type));
+        public Builder withoutCriteria(Class<? extends PdfComparisonCriteria> criteriaClass) {
+            criteriaMap.remove(criteriaClass);
+            return this;
+        }
+        
+        /**
+         * Removes all criteria from the configuration.
+         *
+         * @return this builder instance for method chaining
+         */
+        public Builder clearCriteria() {
+            criteriaMap.clear();
             return this;
         }
 

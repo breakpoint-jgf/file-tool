@@ -2,9 +2,8 @@ package com.safe.room.file.tool.comparator;
 
 import com.safe.room.file.tool.comparator.pdf.PdfComparator;
 import com.safe.room.file.tool.comparator.pdf.PdfComparisonConfig;
+import com.safe.room.file.tool.comparator.pdf.criteria.TextContentComparisonCriteria;
 import com.safe.room.file.tool.comparator.pdf.dto.ComparisonResult;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -14,7 +13,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PdfComparatorTest {
 
@@ -61,46 +61,57 @@ class PdfComparatorTest {
     }
     
     @Test
-    void compare_withSizeComparisonOnly_detectsSizeDifferences() throws Exception {
+    void compare_withTextContentComparison_detectsContentDifferences() throws Exception {
         PdfComparisonConfig config = PdfComparisonConfig.builder()
-                .withSizeComparison()
+                .withCriteria(new TextContentComparisonCriteria(false))
                 .build();
         
         PdfComparator comparator = new PdfComparator(config);
         ComparisonResult result = comparator.compare(testPdf1, testPdf2);
         
-        assertEquals(1, result.differences().size());
-        assertEquals("SIZE", result.differences().get(0).type());
+        assertFalse(result.differences().isEmpty(), "Expected differences but found none");
+        
+        // Debug output to help diagnose the issue
+        System.out.println("Found differences:");
+        result.differences().forEach(diff -> 
+            System.out.printf("- Type: %s, Description: %s%n", diff.type(), diff.description())
+        );
+        
+        // Check for TEXT_CONTENT difference
+        boolean hasTextContentDiff = result.differences().stream()
+            .anyMatch(diff -> "TEXT_CONTENT".equals(diff.type().getValue()));
+            
+        assertTrue(hasTextContentDiff, 
+            "Expected a difference of type TEXT_CONTENT but found: " + 
+            result.differences().stream()
+                .map(d -> String.format("%s (%s)", d.type(), d.description()))
+                .collect(java.util.stream.Collectors.joining(", ")));
     }
     
     @Test
-    void compare_withCustomCriteria_usesProvidedCriteria() throws Exception {
-        // Create a test file with a different page count using PDFBox
+    void compare_withTextContentComparisonIgnoreSpacing_ignoresSpacingDifferences() throws Exception {
+        // Create a test file with the same content but different spacing
         File testPdf4 = tempDir.resolve("test4.pdf").toFile();
+        createTempPdfFile("test4.pdf", "This   is   test   PDF   1"); // Same content as testPdf1 but with extra spaces
         
-        // Create a new PDF with 2 pages using PDFBox
-        try (PDDocument document = new PDDocument()) {
-            // First page
-            document.addPage(new PDPage());
-            // Second page
-            document.addPage(new PDPage());
-            document.save(testPdf4);
-        }
-        
-        PdfComparisonConfig config = PdfComparisonConfig.builder()
-                .withCriteria(new PageCountComparisonCriteria())
-                .withCriteria(new SizeComparisonCriteria())
+        // Test with spacing differences not ignored
+        PdfComparisonConfig config1 = PdfComparisonConfig.builder()
+                .withCriteria(new TextContentComparisonCriteria(false)) // Don't ignore spacing
                 .build();
         
-        PdfComparator comparator = new PdfComparator(config);
+        PdfComparator comparator1 = new PdfComparator(config1);
+        ComparisonResult result1 = comparator1.compare(testPdf1, testPdf4);
+        assertFalse(result1.areEqual());
         
-        // Compare with a file that has a different page count and size
-        ComparisonResult result = comparator.compare(testPdf1, testPdf4);
+        // Test with spacing differences ignored
+        PdfComparisonConfig config2 = PdfComparisonConfig.builder()
+                .withCriteria(new TextContentComparisonCriteria(true)) // Ignore spacing
+                .build();
         
-        // Should have differences for both size and page count
-        assertEquals(2, result.differences().size(), 
-            "Expected 2 differences (size and page count), but got: " + result.differences());
-            
+        PdfComparator comparator2 = new PdfComparator(config2);
+        ComparisonResult result2 = comparator2.compare(testPdf1, testPdf4);
+        assertTrue(result2.areEqual());
+        
         // Clean up
         if (testPdf4.exists()) {
             testPdf4.delete();
