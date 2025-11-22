@@ -62,7 +62,14 @@ public class FileCompareReportGenerator {
         
         // Process the template and write to file
         try (Writer out = new FileWriter(reportFile, StandardCharsets.UTF_8)) {
-            Template template = freeMarkerConfig.getTemplate(TEMPLATE_DIR + TEMPLATE_NAME);
+            // First try to load the template with the full path
+            Template template;
+            try {
+                template = freeMarkerConfig.getTemplate(TEMPLATE_DIR + TEMPLATE_NAME);
+            } catch (Exception e) {
+                // Fallback to loading from classpath root if not found in subdirectory
+                template = freeMarkerConfig.getTemplate(TEMPLATE_NAME);
+            }
             template.process(dataModel, out);
         } catch (TemplateException e) {
             throw new IOException("Error processing report template: " + e.getMessage(), e);
@@ -98,7 +105,14 @@ public class FileCompareReportGenerator {
         
         // Process the template and write to file
         try (Writer out = new FileWriter(outputFile, StandardCharsets.UTF_8)) {
-            Template template = freeMarkerConfig.getTemplate(TEMPLATE_DIR + TEMPLATE_NAME);
+            // First try to load the template with the full path
+            Template template;
+            try {
+                template = freeMarkerConfig.getTemplate(TEMPLATE_DIR + TEMPLATE_NAME);
+            } catch (Exception e) {
+                // Fallback to loading from classpath root if not found in subdirectory
+                template = freeMarkerConfig.getTemplate(TEMPLATE_NAME);
+            }
             template.process(dataModel, out);
         } catch (TemplateException e) {
             throw new IOException("Error processing report template: " + e.getMessage(), e);

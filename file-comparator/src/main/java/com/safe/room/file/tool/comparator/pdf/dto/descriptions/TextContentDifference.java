@@ -9,10 +9,12 @@ import com.safe.room.file.tool.comparator.pdf.enumeration.DifferenceType;
 public class TextContentDifference implements DifferenceDescription {
     private final String diffDetails;
     private final int pageNumber;
+    private final boolean ignoreSpacingDifferences;
 
-    public TextContentDifference(String diffDetails, int pageNumber) {
+    public TextContentDifference(String diffDetails, int pageNumber, boolean ignoreSpacingDifferences) {
         this.diffDetails = diffDetails;
         this.pageNumber = pageNumber;
+        this.ignoreSpacingDifferences = ignoreSpacingDifferences;
     }
 
     @Override
@@ -31,5 +33,9 @@ public class TextContentDifference implements DifferenceDescription {
 
     public int getPageNumber() {
         return pageNumber;
+    }
+    
+    public boolean isIgnoreSpacingDifferences() {
+        return ignoreSpacingDifferences;
     }
 }

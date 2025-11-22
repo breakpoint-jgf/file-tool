@@ -58,7 +58,7 @@ public class TextContentComparisonCriteria extends AbstractPdfComparisonCriteria
                 
                 if (!areTextsEqual(text1, text2)) {
                     String diffDetails = findTextDifferences(text1, text2, currentPage);
-                    TextContentDifference textDiff = new TextContentDifference(diffDetails, currentPage);
+                    TextContentDifference textDiff = new TextContentDifference(diffDetails, currentPage, ignoreSpacingDifferences);
                     addDifference(differences, textDiff, "Page Content", currentPage);
                     hasDifferences = true;
                 }

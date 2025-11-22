@@ -2,6 +2,7 @@ package com.safe.room.file.tool.comparator.pdf;
 
 import com.safe.room.file.tool.comparator.FileComparator;
 import com.safe.room.file.tool.comparator.pdf.criteria.PdfComparisonCriteria;
+import com.safe.room.file.tool.comparator.pdf.criteria.TextContentComparisonCriteria;
 import com.safe.room.file.tool.comparator.pdf.dto.ComparisonResult;
 import com.safe.room.file.tool.comparator.pdf.dto.DifferenceInfo;
 import org.apache.pdfbox.Loader;
@@ -65,6 +66,19 @@ public class PdfComparator implements FileComparator {
         try (PDDocument doc1 = Loader.loadPDF(file1);
              PDDocument doc2 = Loader.loadPDF(file2)) {
             
+            // Get all criteria info for the report
+            List<String> criteriaInfo = config.getCriteria().stream()
+                .map(criteria -> {
+                    if (criteria instanceof TextContentComparisonCriteria) {
+                        boolean ignoreSpacing = ((TextContentComparisonCriteria) criteria).isIgnoreSpacingDifferences();
+                        return String.format("Text comparison criteria: %s", 
+                            ignoreSpacing ? "Ignoring spacing differences" : "Including spacing differences");
+                    }
+                    return criteria.getClass().getSimpleName();
+                })
+                .toList();
+                
+            // Perform the actual comparison
             for (PdfComparisonCriteria criteria : config.getCriteria()) {
                 boolean criteriaResult = criteria.compare(file1, file2, doc1, doc2, differences);
                 areEqual = areEqual && criteriaResult;
@@ -73,7 +87,7 @@ public class PdfComparator implements FileComparator {
             throw new IOException("Error comparing PDF files: " + e.getMessage(), e);
         }
 
-        return new ComparisonResult(areEqual, differences);
+        return ComparisonResult.withCriteria(areEqual, differences, config.getCriteria());
     }
 
     @Override

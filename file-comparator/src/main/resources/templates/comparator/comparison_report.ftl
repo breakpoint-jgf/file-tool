@@ -103,7 +103,6 @@
         
         .diff-header {
             background-color: var(--color-primary);
-            color: white;
             padding: 10px 15px;
             font-weight: 500;
             display: flex;
@@ -256,6 +255,19 @@
         <h3>Files Compared:</h3>
         <div><strong>File 1:</strong> ${file1.absolutePath} (${file1.length()} bytes, last modified: ${file1.lastModified()?number_to_datetime?string("yyyy-MM-dd HH:mm:ss")})</div>
         <div><strong>File 2:</strong> ${file2.absolutePath} (${file2.length()} bytes, last modified: ${file2.lastModified()?number_to_datetime?string("yyyy-MM-dd HH:mm:ss")})</div>
+Difference
+        <div class="criteria-info" style="margin-top: 15px;">
+            <h3>Comparison Criteria Used:</h3>
+            <ul style="margin-top: 5px;">
+                <#if result.criteriaUsed()?has_content>
+                    <#list result.criteriaUsed() as criteria>
+                        <li>${criteria}</li>
+                    </#list>
+                <#else>
+                    <li>No specific criteria specified</li>
+                </#if>
+            </ul>
+        </div>
     </div>
 
     <#if !result.areEqual() && result.differences()?has_content>
